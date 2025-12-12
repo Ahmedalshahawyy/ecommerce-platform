@@ -54,7 +54,7 @@ else
 		echo "npm not found in PATH; skipping frontend e2e tests."
 	else
 		pushd frontend
-		npm ci
+		npm install
 		npx playwright install --with-deps
 		# Start backend and frontend
 		python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &

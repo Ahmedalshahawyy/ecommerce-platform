@@ -55,7 +55,7 @@ if ($env:SKIP_E2E -eq '1') {
         Write-Warning "npm is not available in PATH; skipping frontend e2e tests."
         Pop-Location
     } else {
-        npm ci
+        npm install
         npx playwright install --with-deps
         $env:PYTHONPATH = $ProjectRoot
         $backendProc = Start-Process -FilePath python -ArgumentList '-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', '8000' -PassThru
