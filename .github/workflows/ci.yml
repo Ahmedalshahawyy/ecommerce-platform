@@ -5,6 +5,28 @@ on:
   pull_request:
 
 jobs:
+  ci-info:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect environment info
+        run: |
+          echo "Python version:" > ci-info.txt
+          python --version >> ci-info.txt 2>&1 || true
+          echo "Node version:" >> ci-info.txt
+          node --version >> ci-info.txt 2>&1 || true
+          echo "NPM version:" >> ci-info.txt
+          npm --version >> ci-info.txt 2>&1 || true
+          echo "List top-level files:" >> ci-info.txt
+          ls -la >> ci-info.txt 2>&1 || true
+          echo "frontend/package.json:" >> ci-info.txt
+          cat frontend/package.json >> ci-info.txt 2>&1 || true
+      - name: Upload CI info
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-info
+          path: ci-info.txt
+
   backend-lint:
     runs-on: ubuntu-latest
     steps:
