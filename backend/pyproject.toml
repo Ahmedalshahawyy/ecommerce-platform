@@ -11,6 +11,18 @@ requires-python = ">=3.11"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+exclude = [
+    ".venv",
+    "venv",
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".pytest_cache",
+    "alembic",
+]
+
+[tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
     "W",      # pycodestyle warnings
@@ -22,16 +34,6 @@ ignore = [
     "E501",   # line too long (handled by formatter)
     "B008",   # FastAPI `Depends` in function signatures is OK
     "E402",   # module-level import not at top (we call load_dotenv before some imports)
-]
-exclude = [
-    ".venv",
-    "venv",
-    ".git",
-    "__pycache__",
-    "build",
-    "dist",
-    ".pytest_cache",
-    "alembic",
 ]
 
 [tool.black]
