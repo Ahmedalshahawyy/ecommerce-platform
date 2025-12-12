@@ -212,6 +212,18 @@ npx playwright test --ui
 - **Artifacts uploaded:** `playwright-report`, `test-results`, and recorded videos/screenshots.
 - **Where to find them:** Open the GitHub Actions run for the workflow and download the `playwright-report` or `playwright-report-run-all-tests` artifacts from the job that ran e2e.
 
+Tip: use the GitHub CLI to list runs and download artifacts from the latest workflow run:
+
+```bash
+# List recent runs for the repository
+gh run list --repo <owner>/<repo> --limit 10
+
+# Download the `playwright-report` artifact for a specific run
+gh run download <run-id> -R <owner>/<repo> -n playwright-report -D ./artifacts
+```
+
+Note: the `run-all-tests` job also uploads `coverage.xml` as the `coverage-xml` artifact — useful when debugging test failures.
+
 > Note: A pull request has been created to enable and verify Playwright artifact uploads in CI.
 
 > CI runs may be retried automatically on new commits to this branch; this update is trivial.

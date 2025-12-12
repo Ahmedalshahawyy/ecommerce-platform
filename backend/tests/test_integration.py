@@ -53,9 +53,6 @@ def test_e2e_flow():
     assert r.status_code == 200
     assert r.json()["name"] == "E2E Test Item Updated"
 
-    # Delete product
-    r = requests.delete(f"{BASE_URL}/products/{pid}", headers=headers)
-    assert r.status_code == 200
 
     # Add to cart
     r = requests.post(
@@ -69,3 +66,7 @@ def test_e2e_flow():
     cart = r.json()
     assert len(cart) > 0
     assert cart[0]["product_id"] == pid
+
+    # Delete product (after verifying it was added to cart)
+    r = requests.delete(f"{BASE_URL}/products/{pid}", headers=headers)
+    assert r.status_code == 200
