@@ -214,6 +214,8 @@ npx playwright test --ui
 
 > Note: A pull request has been created to enable and verify Playwright artifact uploads in CI.
 
+> CI runs may be retried automatically on new commits to this branch; this update is trivial.
+
 
 ### Run All Tests in CI
 
