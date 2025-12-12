@@ -96,7 +96,7 @@ jobs:
           pip install -r backend/requirements.txt
       - name: Run backend tests with coverage
         run: |
-          pytest -q --cov=backend --cov-report=xml backend/tests
+          pytest -q --cov=backend --cov-report=xml:coverage.xml backend/tests
 
 
   frontend:
@@ -141,7 +141,7 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: |
-          npm ci
+          npm install
           npx playwright install --with-deps
       - name: Run all tests (script)
         run: |
@@ -214,7 +214,7 @@ jobs:
       - name: Install frontend deps and Playwright
         working-directory: frontend
         run: |
-            npm install
+          npm install
           npx playwright install --with-deps
       - name: Build frontend
         working-directory: frontend
