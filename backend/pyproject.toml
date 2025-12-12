@@ -20,6 +20,8 @@ select = [
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
+    "B008",   # FastAPI `Depends` in function signatures is OK
+    "E402",   # module-level import not at top (we call load_dotenv before some imports)
 ]
 exclude = [
     ".venv",
