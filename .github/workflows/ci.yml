@@ -125,6 +125,28 @@ jobs:
         run: |
           chmod +x ./scripts/run_all_tests.sh
           ./scripts/run_all_tests.sh
+      - name: Upload coverage.xml (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+      - name: Upload debug dirs
+        if: always()
+        run: |
+          echo "Listing frontend and backend dirs"
+          ls -la frontend || true
+          ls -la backend || true
+        shell: bash
+      - name: Upload debug files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: |
+            frontend/package.json
+            frontend/playwright.config.js
+            backend/pyproject.toml
       - name: Upload Playwright artifacts (from run_all_tests)
         if: always()
         uses: actions/upload-artifact@v4

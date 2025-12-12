@@ -30,6 +30,24 @@ $env:DATABASE_URL = "sqlite:///./ecommerce_test.db"
 $env:PYTHONPATH = $ProjectRoot
 $uvicornProc = Start-Process -FilePath python -ArgumentList '-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', '8000' -PassThru
 Start-Sleep -Seconds 2
+# Wait for backend health endpoint
+function Wait-ForUrl {
+    param($url, $timeoutSec)
+    $start = Get-Date
+    while ((Get-Date) - $start -lt (New-TimeSpan -Seconds $timeoutSec)) {
+        try {
+            $r = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) { return $true }
+        } catch { }
+        Start-Sleep -Seconds 1
+    }
+    return $false
+}
+if (-not (Wait-ForUrl -url 'http://127.0.0.1:8000/health' -timeoutSec 30)) {
+    Write-Error "Backend failed to start"
+    Stop-Process -Id $uvicornProc.Id -Force -ErrorAction SilentlyContinue
+    Exit 2
+}
 try {
     python -m pytest --cov=backend --cov-report=xml:coverage.xml backend/tests -q -vv
     if ($LASTEXITCODE -ne 0) { throw "Backend tests failed with $LASTEXITCODE" }
