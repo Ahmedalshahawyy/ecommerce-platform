@@ -212,6 +212,8 @@ npx playwright test --ui
 - **Artifacts uploaded:** `playwright-report`, `test-results`, and recorded videos/screenshots.
 - **Where to find them:** Open the GitHub Actions run for the workflow and download the `playwright-report` or `playwright-report-run-all-tests` artifacts from the job that ran e2e.
 
+> Note: A pull request has been created to enable and verify Playwright artifact uploads in CI.
+
 
 ### Run All Tests in CI
 
