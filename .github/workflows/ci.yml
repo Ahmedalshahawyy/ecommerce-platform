@@ -52,7 +52,16 @@ jobs:
           pre-commit run --all-files || true
       - name: Lint with ruff
         run: |
-          ruff check backend/
+          # Capture ruff output to a file so we can upload logs even if the step fails
+          ruff check backend/ > ruff-output.txt 2>&1 || true
+          # Also emit the output to the console for immediate visibility
+          cat ruff-output.txt || true
+      - name: Upload ruff output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-ruff-output
+          path: ruff-output.txt
       - name: Format check with black
         run: |
           black --check backend/
@@ -79,7 +88,15 @@ jobs:
       - name: Lint with ESLint
         working-directory: frontend
         run: |
-          npm run lint
+          # Capture ESLint output to a file for diagnostics
+          npm run lint > eslint-output.txt 2>&1 || true
+          cat eslint-output.txt || true
+      - name: Upload eslint output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-eslint-output
+          path: frontend/eslint-output.txt
 
   backend:
     runs-on: ubuntu-latest
