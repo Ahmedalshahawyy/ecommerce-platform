@@ -1,0 +1,36 @@
+I001 [*] Import block is un-sorted or un-formatted
+ --> backend/db.py:1:1
+  |
+1 | / import os
+2 | | from sqlalchemy import create_engine
+3 | | from sqlalchemy.orm import sessionmaker, declarative_base
+  | |_________________________________________________________^
+4 |
+5 |   SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ecommerce.db")
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> backend/migrate.py:1:1
+  |
+1 | / from alembic.config import Config
+2 | | from alembic import command
+3 | | import os
+  | |_________^
+4 |
+5 |   here = os.path.abspath(os.path.dirname(__file__))
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> backend/models.py:1:1
+  |
+1 | / from sqlalchemy import Column, Integer, String, Float, ForeignKey
+2 | | from sqlalchemy.orm import relationship
+3 | | from .db import Base
+  | |____________________^
+  |
+help: Organize imports
+
+Found 3 errors.
+[*] 3 fixable with the `--fix` option.

@@ -94,7 +94,7 @@ else
 				# Start backend and frontend
 				python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
 				BACKEND_PID=$!
-				npm run dev &
+				npm run dev -- --host 0.0.0.0 &
 				FRONTEND_PID=$!
 				# Wait for both services
 				if ! wait_for_url http://127.0.0.1:8000/health 40 1; then

@@ -222,6 +222,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     needs: [backend, frontend]
     services:
       postgres:

@@ -1,0 +1,38 @@
+....F                                                                    [100%]
+=================================== FAILURES ===================================
+________________________________ test_e2e_flow _________________________________
+
+    def test_e2e_flow():
+        """End-to-end flow: register, login, create product, add to cart."""
+>       wait_for_api()
+
+backend/tests/test_integration.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def wait_for_api():
+        """Wait for API to be ready."""
+        for _ in range(MAX_RETRIES):
+            try:
+                r = requests.get(f"{BASE_URL}/health")
+                if r.status_code == 200:
+                    return
+            except Exception:
+                pass
+            time.sleep(RETRY_INTERVAL)
+>       raise RuntimeError(f"API not ready after {MAX_RETRIES * RETRY_INTERVAL} seconds")
+E       RuntimeError: API not ready after 30 seconds
+
+backend/tests/test_integration.py:21: RuntimeError
+=============================== warnings summary ===============================
+../../../../../opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.14-final-0 _______________
+
+Coverage XML written to file coverage.xml
+=========================== short test summary info ============================
+FAILED backend/tests/test_integration.py::test_e2e_flow - RuntimeError: API not ready after 30 seconds
+1 failed, 4 passed, 1 warning in 31.47s
