@@ -328,6 +328,13 @@ jobs:
           DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
         run: |
           python backend/migrate.py
+      - name: Start backend for integration tests
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
+        run: |
+          python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          # wait for backend
+          until curl -s http://localhost:8000/health > /dev/null; do sleep 1; done
       - name: Run integration tests
         env:
           DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
