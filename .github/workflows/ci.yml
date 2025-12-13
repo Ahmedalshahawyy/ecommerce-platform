@@ -155,6 +155,9 @@ jobs:
 
   run-all-tests:
     runs-on: ubuntu-latest
+    env:
+      USE_PREVIEW: '1'
+      PYTHONPATH: ${{ github.workspace }}
     needs: [backend-lint, frontend-lint]
     steps:
       - uses: actions/checkout@v4

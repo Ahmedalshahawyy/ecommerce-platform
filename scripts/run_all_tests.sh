@@ -39,8 +39,10 @@ export PYTHONPATH="$ROOT"
 # Env flags:
 # SKIP_E2E=1 -> skip frontend e2e
 # FORCE_E2E=1 -> fail if e2e cannot run (npm missing)
+# USE_PREVIEW=1 -> use `vite preview` (build + preview) instead of `npm run dev` (safer in CI)
 SKIP_E2E=${SKIP_E2E:-0}
 FORCE_E2E=${FORCE_E2E:-0}
+USE_PREVIEW=${USE_PREVIEW:-0}
 export PYTHONPATH="$ROOT"
 
 # Clean DB
@@ -94,14 +96,20 @@ else
 				# Start backend and frontend
 				python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
 				BACKEND_PID=$!
-				npm run dev -- --host 0.0.0.0 &
+				if [ "${USE_PREVIEW}" = "1" ]; then
+					echo "USE_PREVIEW=1: building frontend and starting preview"
+					npm run build
+					npm run start -- --port 5173 --host 0.0.0.0 &
+				else
+					npm run dev -- --host 0.0.0.0 &
+				fi
 				FRONTEND_PID=$!
-				# Wait for both services
+				# Wait for both services (longer timeout for frontend preview + build)
 				if ! wait_for_url http://127.0.0.1:8000/health 40 1; then
 					echo "Backend did not become healthy" >&2
 					exit 2
 				fi
-				if ! wait_for_url http://127.0.0.1:5173/ 40 1; then
+				if ! wait_for_url http://127.0.0.1:5173/ 120 1; then
 					echo "Frontend preview did not become available" >&2
 					exit 2
 				fi
