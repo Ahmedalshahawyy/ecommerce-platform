@@ -1,28 +1,38 @@
 from __future__ import with_statement
+
+import os
+import sys
+from logging.config import fileConfig
+
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-import logging
-import sys
-import os
 
 # allow importing backend package
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend import db as db_module
-from backend import models
 
 config = context.config
 
-# Use the application's SQLAlchemy URL
-# Use the application's SQLAlchemy engine/URL if provided (supports env DATABASE_URL)
-config.set_main_option('sqlalchemy.url', 'sqlite:///./ecommerce.db')
+# Interpret the config file for Python logging.
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 
 target_metadata = db_module.Base.metadata
 
 
+def run_migrations_offline():
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+    """
     # prefer environment DATABASE_URL or the application's engine URL
-    url = os.getenv('DATABASE_URL', str(getattr(db_module.engine, 'url', 'sqlite:///./ecommerce.db')))
-    url = config.get_main_option('sqlalchemy.url')
+    url = os.getenv(
+        "DATABASE_URL", str(getattr(db_module.engine, "url", "sqlite:///./ecommerce.db"))
+    )
     context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
 
     with context.begin_transaction():

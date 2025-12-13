@@ -1,18 +1,19 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+import os
+from datetime import datetime, timedelta, timezone
+from typing import List
+
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel
-from typing import List
-from datetime import datetime, timedelta, timezone
-from passlib.context import CryptContext
 from jose import JWTError, jwt
-import os
-from dotenv import load_dotenv
+from passlib.context import CryptContext
+from pydantic import BaseModel
 
 load_dotenv()
 
-from .db import SessionLocal, engine, Base
 from . import models
+from .db import Base, SessionLocal, engine
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,7 +26,7 @@ app = FastAPI(
 )
 
 # Load CORS origins from env or use defaults
-cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -157,8 +158,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_d
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+    except JWTError as err:
+        raise credentials_exception from err
     user = get_user_by_username(db, username)
     if user is None:
         raise credentials_exception
@@ -186,7 +187,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
 
 
 @app.put("/products/{product_id}", response_model=Product)
-def update_product(product_id: int, p: Product, db=Depends(get_db), current_user=Depends(get_current_user)):
+def update_product(
+    product_id: int, p: Product, db=Depends(get_db), current_user=Depends(get_current_user)
+):
     prod = db.query(models.Product).filter(models.Product.id == product_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -219,7 +222,14 @@ def get_cart(current_user=Depends(get_current_user), db=Depends(get_db)):
     )
     result = []
     for cart_item, prod in items:
-        result.append({"product_id": prod.id, "quantity": cart_item.quantity, "name": prod.name, "price": prod.price})
+        result.append(
+            {
+                "product_id": prod.id,
+                "quantity": cart_item.quantity,
+                "name": prod.name,
+                "price": prod.price,
+            }
+        )
     return result
 
 
@@ -227,14 +237,19 @@ def get_cart(current_user=Depends(get_current_user), db=Depends(get_db)):
 def add_to_cart(item: CartItemIn, current_user=Depends(get_current_user), db=Depends(get_db)):
     existing = (
         db.query(models.CartItem)
-        .filter(models.CartItem.user_id == current_user.id, models.CartItem.product_id == item.product_id)
+        .filter(
+            models.CartItem.user_id == current_user.id,
+            models.CartItem.product_id == item.product_id,
+        )
         .first()
     )
     if existing:
         existing.quantity = existing.quantity + item.quantity
         db.add(existing)
     else:
-        ci = models.CartItem(user_id=current_user.id, product_id=item.product_id, quantity=item.quantity)
+        ci = models.CartItem(
+            user_id=current_user.id, product_id=item.product_id, quantity=item.quantity
+        )
         db.add(ci)
     db.commit()
     return {"status": "ok"}
@@ -242,7 +257,8 @@ def add_to_cart(item: CartItemIn, current_user=Depends(get_current_user), db=Dep
 
 @app.post("/cart/remove")
 def remove_from_cart(item: CartItemIn, current_user=Depends(get_current_user), db=Depends(get_db)):
-    db.query(models.CartItem).filter(models.CartItem.user_id == current_user.id, models.CartItem.product_id == item.product_id).delete()
+    db.query(models.CartItem).filter(
+        models.CartItem.user_id == current_user.id, models.CartItem.product_id == item.product_id
+    ).delete()
     db.commit()
     return {"status": "ok"}
-    conn = sqlite3.connect(DB)

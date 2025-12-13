@@ -1,0 +1,59 @@
+Python version:
+Python 3.12.3
+Node version:
+v20.19.6
+NPM version:
+10.8.2
+List top-level files:
+total 208
+drwxr-xr-x 7 runner runner  4096 Dec 13 00:59 .
+drwxr-xr-x 3 runner runner  4096 Dec 13 00:59 ..
+-rw-r--r-- 1 runner runner   548 Dec 13 00:59 .env.example
+-rw-r--r-- 1 runner runner   621 Dec 13 00:59 .eslintrc.js
+drwxr-xr-x 7 runner runner  4096 Dec 13 00:59 .git
+drwxr-xr-x 3 runner runner  4096 Dec 13 00:59 .github
+-rw-r--r-- 1 runner runner   253 Dec 13 00:59 .pre-commit-config.yaml
+-rw-r--r-- 1 runner runner   140 Dec 13 00:59 .prettierrc.js
+-rw-r--r-- 1 runner runner 19447 Dec 13 00:59 ARCHITECTURE.md
+-rw-r--r-- 1 runner runner  4960 Dec 13 00:59 CONTRIBUTING.md
+-rw-r--r-- 1 runner runner 10456 Dec 13 00:59 DEPLOYMENT.md
+-rw-r--r-- 1 runner runner 12053 Dec 13 00:59 INDEX.md
+-rw-r--r-- 1 runner runner  8588 Dec 13 00:59 PRODUCTION_CHECKLIST.md
+-rw-r--r-- 1 runner runner  9064 Dec 13 00:59 PROJECT_SUMMARY.md
+-rw-r--r-- 1 runner runner  8688 Dec 13 00:59 QUICK_REFERENCE.md
+-rw-r--r-- 1 runner runner 15075 Dec 13 00:59 README.md
+drwxr-xr-x 4 runner runner  4096 Dec 13 00:59 backend
+-rw-r--r-- 1 runner runner    95 Dec 13 00:59 ci-info.txt
+-rw-r--r-- 1 runner runner 13531 Dec 13 00:59 coverage.xml
+-rw-r--r-- 1 runner runner   371 Dec 13 00:59 docker-compose.override.yml
+-rw-r--r-- 1 runner runner   359 Dec 13 00:59 docker-compose.yml
+-rw-r--r-- 1 runner runner 32768 Dec 13 00:59 ecommerce.db
+drwxr-xr-x 4 runner runner  4096 Dec 13 00:59 frontend
+drwxr-xr-x 2 runner runner  4096 Dec 13 00:59 scripts
+frontend/package.json:
+{
+  "name": "ecommerce-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite preview",
+    "lint": "eslint src --ext .jsx,.js",
+    "format": "prettier --write \"src/**/*.{jsx,js,css}\"",
+    "test:e2e": "playwright test --reporter=html,junit --output=test-results"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@playwright/test": "^1.40.0",
+    "eslint": "^8.50.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.0.0"
+  }
+}

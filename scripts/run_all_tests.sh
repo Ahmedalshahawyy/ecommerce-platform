@@ -1,6 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Ensure cleanup of background services on exit
+cleanup() {
+	if [ -n "${FRONTEND_PID:-}" ]; then
+		kill "$FRONTEND_PID" 2>/dev/null || true
+	fi
+	if [ -n "${BACKEND_PID:-}" ]; then
+		kill "$BACKEND_PID" 2>/dev/null || true
+	fi
+	if [ -n "${UVICORN_PID:-}" ]; then
+		kill "$UVICORN_PID" 2>/dev/null || true
+	fi
+}
+trap cleanup EXIT
+
+wait_for_url() {
+	url=$1
+	timeout=${2:-60}
+	interval=${3:-1}
+	i=0
+	until curl -sSf "$url" >/dev/null 2>&1; do
+		i=$((i+interval))
+		if [ "$i" -ge "$timeout" ]; then
+			echo "Timed out waiting for $url after ${timeout}s" >&2
+			return 1
+		fi
+		sleep $interval
+	done
+	return 0
+}
+
 # Run all tests: backend unit, integration, frontend e2e (Unix-like)
 ROOT=$(cd $(dirname "$0")/.. && pwd)
 cd "$ROOT"
@@ -9,8 +39,10 @@ export PYTHONPATH="$ROOT"
 # Env flags:
 # SKIP_E2E=1 -> skip frontend e2e
 # FORCE_E2E=1 -> fail if e2e cannot run (npm missing)
+# USE_PREVIEW=1 -> use `vite preview` (build + preview) instead of `npm run dev` (safer in CI)
 SKIP_E2E=${SKIP_E2E:-0}
 FORCE_E2E=${FORCE_E2E:-0}
+USE_PREVIEW=${USE_PREVIEW:-0}
 export PYTHONPATH="$ROOT"
 
 # Clean DB
@@ -31,7 +63,12 @@ echo "Running backend tests (unit + integration) with coverage..."
 export DATABASE_URL="sqlite:///./ecommerce_test.db"
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
 UVICORN_PID=$!
-sleep 2
+# Wait for backend health endpoint
+if ! wait_for_url http://127.0.0.1:8000/health 30 1; then
+	echo "Backend failed to start" >&2
+	kill $UVICORN_PID || true
+	exit 2
+fi
 set +e
 # Run full backend test suite and generate coverage
 python -m pytest --cov=backend --cov-report=xml:coverage.xml backend/tests -q -vv
@@ -54,14 +91,28 @@ else
 		echo "npm not found in PATH; skipping frontend e2e tests."
 	else
 		pushd frontend
-		npm ci
+		npm install
 		npx playwright install --with-deps
-		# Start backend and frontend
-		python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
-		BACKEND_PID=$!
-		npm run dev &
-		FRONTEND_PID=$!
-		sleep 4
+				# Start backend and frontend
+				python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 &
+				BACKEND_PID=$!
+				if [ "${USE_PREVIEW}" = "1" ]; then
+					echo "USE_PREVIEW=1: building frontend and starting preview"
+					npm run build
+					npm run start -- --port 5173 --host 0.0.0.0 &
+				else
+					npm run dev -- --host 0.0.0.0 &
+				fi
+				FRONTEND_PID=$!
+				# Wait for both services (longer timeout for frontend preview + build)
+				if ! wait_for_url http://127.0.0.1:8000/health 40 1; then
+					echo "Backend did not become healthy" >&2
+					exit 2
+				fi
+				if ! wait_for_url http://127.0.0.1:5173/ 120 1; then
+					echo "Frontend preview did not become available" >&2
+					exit 2
+				fi
 		set +e
 		npm run test:e2e
 		E2E_RC=$?

@@ -1,0 +1,347 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci-info:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect environment info
+        run: |
+          echo "Python version:" > ci-info.txt
+          python --version >> ci-info.txt 2>&1 || true
+          echo "Node version:" >> ci-info.txt
+          node --version >> ci-info.txt 2>&1 || true
+          echo "NPM version:" >> ci-info.txt
+          npm --version >> ci-info.txt 2>&1 || true
+          echo "List top-level files:" >> ci-info.txt
+          ls -la >> ci-info.txt 2>&1 || true
+          echo "frontend/package.json:" >> ci-info.txt
+          cat frontend/package.json >> ci-info.txt 2>&1 || true
+      - name: Upload CI info
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-info
+          path: ci-info.txt
+
+  backend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Run pre-commit hooks
+        run: |
+          pip install pre-commit
+          pre-commit run --all-files || true
+      - name: Lint with ruff
+        run: |
+          # Capture ruff output to a file so we can upload logs even if the step fails
+          ruff check backend/ > ruff-output.txt 2>&1 || true
+          # Also emit the output to the console for immediate visibility
+          cat ruff-output.txt || true
+      - name: Upload ruff output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-ruff-output
+          path: ruff-output.txt
+      - name: Format check with black
+        run: |
+          black --check backend/
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+      - name: Install frontend deps
+        working-directory: frontend
+        run: |
+            npm install
+      - name: Lint with ESLint
+        working-directory: frontend
+        run: |
+          # Capture ESLint output to a file for diagnostics
+          npm run lint > eslint-output.txt 2>&1 || true
+          cat eslint-output.txt || true
+      - name: Upload eslint output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-eslint-output
+          path: frontend/eslint-output.txt
+
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    needs: backend-lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Run backend tests with coverage
+        run: |
+          # Capture pytest output to a file for diagnostics and still fail the step
+          pytest -q --cov=backend --cov-report=xml:coverage.xml backend/tests 2>&1 | tee backend-test-output.txt
+      - name: Upload backend test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-output
+          path: backend-test-output.txt
+      - name: Upload coverage.xml (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+
+  frontend:
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install frontend deps
+        working-directory: frontend
+        run: |
+            npm install
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm run build
+      - name: Install Playwright
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps
+
+  run-all-tests:
+    runs-on: ubuntu-latest
+    env:
+      USE_PREVIEW: '1'
+      PYTHONPATH: ${{ github.workspace }}
+    needs: [backend-lint, frontend-lint]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Install frontend deps
+        working-directory: frontend
+        run: |
+          npm install
+          npx playwright install --with-deps
+      - name: Run all tests (script)
+        run: |
+          chmod +x ./scripts/run_all_tests.sh
+          ./scripts/run_all_tests.sh
+      - name: Upload coverage.xml (if present)
+        if: always()
+        run: |
+          if [ -f coverage.xml ]; then mkdir -p artifacts && cp coverage.xml artifacts/coverage.xml; else echo "No coverage.xml present, skipping upload"; fi
+      - name: Upload coverage.xml (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: artifacts/coverage.xml
+      - name: Upload debug dirs
+        if: always()
+        run: |
+          echo "Listing frontend and backend dirs"
+          ls -la frontend || true
+          ls -la backend || true
+        shell: bash
+      - name: Upload debug files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: |
+            frontend/package.json
+            frontend/playwright.config.js
+            backend/pyproject.toml
+      - name: Upload Playwright artifacts (from run_all_tests)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-run-all-tests
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            frontend/**/video
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+        continue-on-error: true
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    needs: [backend, frontend]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Install frontend deps and Playwright
+        working-directory: frontend
+        run: |
+          npm install
+          npx playwright install --with-deps
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm run build
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+      - name: Run backend migrations
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
+        run: |
+          python backend/migrate.py
+      - name: Start backend and frontend preview
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
+        run: |
+          # start backend
+          uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          # start frontend preview (serve built files)
+          (cd frontend && npm run start -- --port 5173) &
+      - name: Wait for services
+        run: |
+          until curl -s http://localhost:8000/health > /dev/null; do sleep 1; done
+          until curl -s http://localhost:5173/ > /dev/null; do sleep 1; done
+      - name: Run e2e tests (Playwright)
+        working-directory: frontend
+        env:
+          SKIP_WEB_SERVER: 1
+          BASE_URL: http://localhost:5173
+          API_URL: http://localhost:8000
+        timeout-minutes: 20
+        run: |
+          npx playwright test --reporter=html,junit
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            frontend/**/video
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: backend
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+      - name: Run migrations against Postgres
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
+        run: |
+          python backend/migrate.py
+      - name: Start backend for integration tests
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
+        run: |
+          python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          # wait for backend
+          until curl -s http://localhost:8000/health > /dev/null; do sleep 1; done
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:password@localhost:5432/postgres
+        run: |
+          pytest -q backend/tests
